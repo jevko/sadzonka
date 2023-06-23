@@ -1,0 +1,20 @@
+{
+  "name": "sadzonka",
+  "type": "module",
+  "version": "0.1.0",
+  "description": "A little serailization format based on a minimal syntax derived from Jevko (Jevko minus digraphs)",
+  "main": "sadzonka.js",
+  "scripts": {
+    "test": "node --test"
+  },
+  "keywords": [
+    "serailization",
+    "format",
+    "derived",
+    "jevko",
+    "syntax",
+    "minimal"
+  ],
+  "author": "Darius J Chuck",
+  "license": "MIT"
+}

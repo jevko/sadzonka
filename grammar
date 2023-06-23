@@ -1,0 +1,3 @@
+tree = sub* text
+sub = text '[' tree ']'
+text = /[^\[\]]*/
