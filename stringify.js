@@ -34,6 +34,10 @@ const esc = (str) => {
       parts.push(str.slice(h, i), '[}]')
       h = i + 1
     }
+    else if (c === '`') {
+      parts.push(str.slice(h, i), '[~]')
+      h = i + 1
+    }
   }
   const tail = str.slice(h)
   if (parts.length > 0) return `\\[${parts.join('')}${tail}]`

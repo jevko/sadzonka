@@ -18,9 +18,12 @@ export const totree = (str, state = {
       text = ''
     }
     else if (c === ']') {
-      if (state.depth < 1) throw SyntaxError(`Unexpected opener (]) at ${state.index}!`)
+      if (state.depth < 1) throw SyntaxError(`Unexpected closer (]) at ${state.index}!`)
       state.depth -= 1
       return {subs, text}
+    }
+    else if (c === '`') {
+      throw SyntaxError('Unexpected reserved character (`) at ' + state.index)
     }
     else text += c
   }
@@ -71,6 +74,7 @@ export const esc = (tree) => {
     const {text: t} = tree
     if (t === '{') ret += '['
     else if (t === '}') ret += ']'
+    else if (t === '~') ret += '`'
     else throw SyntaxError(`Unexpected escape: |${t}|`)
   }
   return ret + text

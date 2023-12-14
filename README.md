@@ -1,6 +1,6 @@
 # sadzonka
 
-A little serailization format based on a minimal syntax derived from Jevko (Jevko minus digraphs). Implemented in JavaScript.
+A little serailization format based on a minimal syntax derived from and compatible with Jevko (Jevko minus digraphs). Implemented in JavaScript.
 
 Parsing happens in three steps:
 
@@ -14,17 +14,17 @@ Serializing works for strings, an arrays, and objects, where arrays and objects 
 
 We start with the following formal grammar (ABNF + RegExp):
 
-```
+```abnf
 tree = *sub text
 sub  = text '[' tree ']'
-text = /[^\[\]]*/
+text = /[^\[\]`]*/
 ```
 
 Meaning:
 
 * a `tree` is zero or more `sub`s followed by `text`
 * a `sub` is text followed by `tree` enclosed in square brackets
-* `text` is zero or more characters which are not square brackets
+* `text` is zero or more characters which are not square brackets `[]` or backticks `` ` ``
 
 ## Preprocessing step
 
@@ -59,27 +59,32 @@ text[ text ]
 
 ### Escaping
 
-To supress removing comments, trimming whitespace, and to have square brackets as part of text we need some sort of an escape mechanism.
+To supress removing comments, trimming whitespace, and to have square brackets or backticks as part of text we need some sort of an escape mechanism.
 
 This is done as follows.
 
-If we want to have a sub like `}{text with brackets}{[...]`, except with square brackets instead of curly brackets as part of the text we should write that like so:
+If we want to have a sub like `~}{text}{~[...]`, except with square brackets instead of curly brackets and backticks instead of tildes as part of the text (so the actual text we want is literally `` `][text][` ``) we should write that like so:
 
 ```
-\[[}][{]text with brackets[}][{]][...]
+\[[~][}][{]text[}][{][~]][...]
 ```
 
-If we want square brackets in the text of a tree, e.g.:
+If we want square brackets or backticks in the text of a tree, e.g.:
 
 ```
-sub1[...] sub2[...] }{text with brackets}{
+sub1[...] sub2[...] ~}{text}{~
 ```
 
 we should write:
 
 ```
-sub1[...] sub2[...] \[[}][{]text with brackets[}][{]]
+sub1[...] sub2[...] \[[~][}][{]text with brackets[}][{][~]]
 ```
+
+<!-- todo -->
+<!-- ## Transformation to JS values -->
+
+<!-- todo: strings, arrays, objects -->
 
 ## Development
 
