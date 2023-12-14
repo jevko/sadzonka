@@ -23,7 +23,7 @@ text = /[^\[\]`]*/
 Meaning:
 
 * a `tree` is zero or more `sub`s followed by `text`
-* a `sub` is text followed by `tree` enclosed in square brackets
+* a `sub` is `text` followed by `tree` enclosed in square brackets `[]`
 * `text` is zero or more characters which are not square brackets `[]` or backticks `` ` ``
 
 ## Preprocessing step
