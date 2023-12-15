@@ -230,8 +230,8 @@ const parseFenced = (str, state, fencelen, fencefrom) => {
           thru,
           til,
           digraphs: [],
-          fence: {
-            sidelength: fencelen,
+          fenced: {
+            fencelength: fencelen,
             from: fencefrom,
             thru: prev,
             til: location(state),
@@ -246,8 +246,8 @@ const parseFenced = (str, state, fencelen, fencefrom) => {
           thru,
           til,
           digraphs: [],
-          fence: {
-            sidelength: fencelen,
+          fenced: {
+            fencelength: fencelen,
             from: fencefrom,
             thru: prev,
             til: location(state),
@@ -265,8 +265,8 @@ const parseFenced = (str, state, fencelen, fencefrom) => {
       thru,
       til,
       digraphs: [],
-      fence: {
-        sidelength: fencelen,
+      fenced: {
+        fencelength: fencelen,
         from: fencefrom,
         thru: prev,
         til: location(state),
