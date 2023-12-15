@@ -20,8 +20,12 @@ const advance = (str, state) => {
   state.pc = c
   state.index += 1
 }
-const location = (state) => {
+const locationstr = (state) => {
   return `${state.line}:${state.column}`
+}
+const location = (state) => {
+  const {index, line, column} = state
+  return {index, line, column}
 }
 
 // todo: max depth
@@ -29,7 +33,7 @@ const parseTop = (str) => {
   const state = {index: 0, line: 1, column: 1}
   const tree = parseTree(str, state)
   if (state.index !== str.length)    throw SyntaxError(
-    `Expected end of input but got ${str[state.index]} at ${location(state)}!`
+    `Expected end of input but got ${str[state.index]} at ${locationstr(state)}!`
   )
   return tree
 }
@@ -47,7 +51,7 @@ const parseTree = (str, state) => {
 }
 const parseSubtree = (str, state) => {
   if (str[state.index] !== opener)   throw SyntaxError(
-    `Expected ${opener} but got ${str[state.index]} at ${location(state)}!`
+    `Expected ${opener} but got ${str[state.index]} at ${locationstr(state)}!`
   )
   advance(str, state)
   const tree = parseTree(str, state)
@@ -55,13 +59,14 @@ const parseSubtree = (str, state) => {
     `Expected ${closer} but got end of input!`
   )
   if (str[state.index] !== closer)   throw SyntaxError(
-    `Expected ${closer} but got ${str[state.index]} at ${location(state)}!`
+    `Expected ${closer} but got ${str[state.index]} at ${locationstr(state)}!`
   )
   advance(str, state)
   return tree
 }
 const parseText = (str, state) => {
-  const startindex = state.index
+  // const startindex = state.index
+  const from = location(state)
   let escapers
   let c = str[state.index]
   if (c === escaper) {
@@ -70,21 +75,39 @@ const parseText = (str, state) => {
     escapers = es
   }
   else escapers = []
-  for (; state.index < str.length; advance(str, state)) {
+  let thru = from
+  for (
+    ; 
+    state.index < str.length; 
+    thru = location(state), advance(str, state)
+  ) {
     c = str[state.index]
     if (c === opener || c === closer) {
       return {
-        startindex, length: state.index - startindex, escapers, source: str
+        from,
+        thru,
+        til: location(state),
+        escapers,
+        source: str,
+        // startindex, length: state.index - startindex, escapers, source: str
       }
     }
     else if (c === escaper) {
       escapers.push(parseEscaper(str, state))
     }
   }
-  return {startindex, length: str.length - startindex, escapers, source: str}
+  return {
+    from,
+    thru,
+    til: location(state),
+    escapers, 
+    source: str,
+    // startindex, length: str.length - startindex, escapers, source: str
+  }
 }
 const parseEscaper = (str, state) => {
-  const escaperindex = state.index
+  // const escaperindex = state.index
+  const from = location(state)
   advance(str, state)
   if (state.index === str.length) throw SyntaxError(
     `Expected ${opener} or ${closer} or ${escaper} after ${
@@ -92,40 +115,57 @@ const parseEscaper = (str, state) => {
     } but got end of input!`
   )
   const c = str[state.index]
-  if ([opener, closer, escaper].includes(c)) return escaperindex
+  if ([opener, closer, escaper].includes(c)) return {
+    from,
+    thru: location(state),
+    // escaperindex
+  }
   throw SyntaxError(
     `Expected ${opener} or ${closer} or ${escaper} after ${
       escaper
-    } but got ${c} at ${location(state)}!`
+    } but got ${c} at ${locationstr(state)}!`
   )
 }
 
 const parseFence = (str, state) => {
   const startindex = state.index
+  const locations = [location(state)]
   advance(str, state)
   const escapers = []
-  for (; state.index < str.length; advance(str, state)) {
+  locations.push(location(state))
+  for (
+    ; 
+    state.index < str.length; 
+    advance(str, state), locations.push(location(state))
+  ) {
     const c = str[state.index]
     if (c !== escaper) {
       if (c === fencer) {
         const fencelen = state.index - startindex
         if (fencelen % 2 === 0) {
-          // escapers + fencer
-          for (let i = startindex; i < state.index; i += 2) {
-            escapers.push(i)
+          // escapers + inactive fencer
+          for (let i = 0; i < locations.length - 1; i += 2) {
+            escapers.push({from: locations[i], thru: locations[i + 1]})
           }
+          // for (let i = startindex; i < state.index; i += 2) {
+          //   escapers.push(i)
+          // }
+          // skip inactive fencer
           advance(str, state)
           return {escapers}
         }
         else {
           // fenced text
           advance(str, state)
-          return parseFenced(str, state, fencelen)
+          return parseFenced(str, state, fencelen, locations[0])
         }
       }
       else if (c === opener || c === closer) {
-        for (let i = startindex; i < state.index; i += 2) {
-          escapers.push(i)
+        // for (let i = startindex; i < state.index; i += 2) {
+        //   escapers.push(i)
+        // }
+        for (let i = 0; i < locations.length - 1; i += 2) {
+          escapers.push({from: locations[i], thru: locations[i + 1]})
         }
         const fencelen = state.index - startindex
         if (fencelen % 2 === 1) {
@@ -138,9 +178,13 @@ const parseFence = (str, state) => {
         const fencelen = state.index - startindex
         if (fencelen % 2 === 0) {
           // escapers + c
-          for (let i = startindex; i < state.index; i += 2) {
-            escapers.push(i)
+          // for (let i = startindex; i < state.index; i += 2) {
+          //   escapers.push(i)
+          // }
+          for (let i = 0; i < locations.length - 1; i += 2) {
+            escapers.push({from: locations[i], thru: locations[i + 1]})
           }
+          // console.log("****", escapers)
           advance(str, state)
           return {escapers}
         }
@@ -149,7 +193,7 @@ const parseFence = (str, state) => {
           throw SyntaxError(
             `Expected ${opener} or ${closer} or ${escaper} after ${
               escaper
-            } but got ${c} at ${location(state)}!`
+            } but got ${c} at ${locationstr(state)}!`
           )
         }
       }
@@ -158,8 +202,11 @@ const parseFence = (str, state) => {
   const fencelen = state.index - startindex
   if (fencelen % 2 === 0) {
     // escapers
-    for (let i = startindex; i < state.index; i += 2) {
-      escapers.push(i)
+    // for (let i = startindex; i < state.index; i += 2) {
+    //   escapers.push(i)
+    // }
+    for (let i = 0; i < locations.length - 1; i += 2) {
+      escapers.push({from: locations[i], thru: locations[i + 1]})
     }
     return {escapers}
   }
@@ -173,35 +220,75 @@ const parseFence = (str, state) => {
   }
 }
 
-const parseFenced = (str, state, fencelen) => {
+const parseFenced = (str, state, fencelen, fencefrom) => {
   // todo
   const startindex = state.index
+  const from = location(state)
   let endindex = -1
-  for (; state.index < str.length; advance(str, state)) {
+  let thru
+  let prev
+  let til
+  for (
+    ; 
+    state.index < str.length; 
+    prev = location(state), advance(str, state)
+  ) {
     const c = str[state.index]
     if (c === fencer) {
       endindex = state.index
+      thru = prev
+      til = location(state)
     }
     else if (endindex !== -1 && c !== escaper) {
       const mfenlen = state.index - endindex - 1
       // console.log('>>>', c, mfenlen, fencelen, state.index, endindex)
       if (c === opener && fencelen === mfenlen) {
         const text = {
-          startindex, 
-          length: endindex - startindex, 
-          escapers: [], 
-          fencelen, 
+          from,
+          thru,
+          til,
+          escapers: [],
+          fence: {
+            sidelength: fencelen,
+            from: fencefrom,
+            thru: prev,
+            til: location(state),
+          },
+          // fencelen,
+          // fencefrom,
+          // fencethru: prev,
+          // fencetil: location(state),
           source: str,
+          // startindex, 
+          // length: endindex - startindex, 
+          // escapers: [], 
+          // fencelen, 
+          // source: str,
         }
         return {text}
       }
       else if (c === closer && fencelen === mfenlen) {
         const text = {
-          startindex, 
-          length: endindex - startindex, 
-          escapers: [], 
-          fencelen, 
-          source: str
+          from,
+          thru,
+          til,
+          escapers: [],
+          fence: {
+            sidelength: fencelen,
+            from: fencefrom,
+            thru: prev,
+            til: location(state),
+          },
+          // fencelen,
+          // fencefrom,
+          // fencethru: prev,
+          // fencetil: location(state),
+          source: str,
+          // startindex, 
+          // length: endindex - startindex, 
+          // escapers: [], 
+          // fencelen, 
+          // source: str
         }
         return {text}
       }
@@ -210,11 +297,26 @@ const parseFenced = (str, state, fencelen) => {
   }
   if (endindex !== -1 && fencelen === str.length - endindex) {
     const text = {
-      startindex, 
-      length: endindex - startindex, 
-      escapers: [], 
-      fencelen, 
+      from,
+      thru,
+      til,
+      escapers: [],
+      fence: {
+        sidelength: fencelen,
+        from: fencefrom,
+        thru: prev,
+        til: location(state),
+      },
+      // fencelen,
+      // fencefrom,
+      // fencethru: prev,
+      // fencetil: location(state),
       source: str,
+      // startindex, 
+      // length: endindex - startindex, 
+      // escapers: [], 
+      // fencelen, 
+      // source: str,
     }
     return {text}
   }
@@ -301,15 +403,23 @@ export const toval = (tree) => {
 // todo: perhaps cache the result in text
 // also at the beginning check if text contains cached result; if so then return that
 const textToStr = (text) => {
-  const {source, startindex} = text
-  let i = startindex
+  // const {source, startindex} = text
+  const {source, from} = text
+  const {index} = from
+  // let i = startindex
+  let i = index
   let ret = ''
   for (const ei of text.escapers) {
     // console.log(ei)
-    ret += source.slice(i, ei)
-    i = ei + 1
+    // ret += source.slice(i, ei)
+    // i = ei + 1
+    const {index} = ei.from
+    ret += source.slice(i, index)
+    i = index + 1
   }
-  return ret + source.slice(i, startindex + text.length)
+  // return ret + source.slice(i, startindex + text.length)
+  return ret + source.slice(i, text.til.index)
+
   // return text.source.slice(text.startindex, text.startindex + text.length)
 }
 
