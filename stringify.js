@@ -48,7 +48,7 @@ export const stringifytree = (tree) => {
   let ret = ''
   const {subs, text} = tree
   for (const {text, tree} of subs) {
-    ret += text + '[' + stringifytree(tree) + ']'
+    ret += esc(text) + '[' + stringifytree(tree) + ']'
   }
-  return ret + text
+  return ret + esc(text)
 }
